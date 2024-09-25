@@ -34,35 +34,55 @@ void imprimeLinha(int offset,FILE *f) {
 }
 
 // classe que implementa a lista invertida
+#include <map>
+#include <vector>
+#include <string>
+#include <iostream>
+
+using namespace std;
+
 class listaInvertida {
 public:
-    // construtor
+    // Construtor
     listaInvertida() { }
-    // destrutor
+
+    // Destrutor
     ~listaInvertida() { }
-    // adiciona palavra na estrutura
-    void adiciona(char *palavra, int offset) { }
-    // realiza busca, retornando vetor de offsets que referenciam a palavra
-    int * busca(char *palavra, int *quantidade) {
-        // substituir pelo resultado da busca na lista invertida
-        *quantidade = 10;
-        int *offsets = new int[10];
-        int i = 0;
-        // exemplo: retornar os primeiros 10 offsets da palavra "terra"
-        offsets[i++] = 58;
-        offsets[i++] = 69;
-        offsets[i++] = 846;
-        offsets[i++] = 943;
-        offsets[i++] = 1083;
-        offsets[i++] = 1109;
-        offsets[i++] = 1569;
-        offsets[i++] = 1792;
-        offsets[i++] = 2041;
-        offsets[i++] = 2431;
-        return offsets;
+
+    // Adiciona palavra na estrutura com o offset
+    void adiciona(char *palavra, int offset) {
+        string palavraStr(palavra); // Convertendo o char* para string
+        indice[palavraStr].push_back(offset); // Adiciona o offset ao vetor correspondente à palavra
     }
+
+    // Realiza busca, retornando vetor de offsets que referenciam a palavra
+    int* busca(char *palavra, int *quantidade) {
+        string palavraStr(palavra); // Convertendo o char* para string
+
+        // Procurar pela palavra no índice
+        auto it = indice.find(palavraStr);
+        if (it != indice.end()) {
+            // Palavra encontrada, retornamos os offsets
+            *quantidade = it->second.size();
+            int *offsets = new int[*quantidade];
+            
+            // Copiando os valores do vetor de offsets
+            for (int i = 0; i < *quantidade; i++) {
+                offsets[i] = it->second[i];
+            }
+            return offsets;
+        } else {
+            // Palavra não encontrada
+            *quantidade = 0;
+            return nullptr;
+        }
+    }
+
 private:
+    // Mapa que armazena palavras e seus respectivos offsets
+    map<string, vector<int>> indice;
 };
+
 
 // programa principal
 int main(int argc, char** argv) {
