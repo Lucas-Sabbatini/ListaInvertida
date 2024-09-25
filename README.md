@@ -1,0 +1,3 @@
+# Lista Invertida em Arquivos
+
+Com base no código inicial disponível aqui, criar estrutura de dados lista invertida em armazenamento secundário (arquivos) e implementar busca. Utilize a classe listaInvertida fornecida, completando a implementação dos seus métodos. O programa principal lê as palavras do arquivo ”biblia.txt”, separa as mesmas e os respectivos offsets, faz chamada ao método de inserção na lista invertida e implementa recuperação das linhas no arquivo de dados. Não é preciso modificar o restante do programa, apenas a classe listaInvertida fornecida
