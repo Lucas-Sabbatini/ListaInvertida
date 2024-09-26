@@ -9,6 +9,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <fstream>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <unordered_map>
+#include <zlib.h>
 
 using namespace std;
 
@@ -23,49 +28,83 @@ void removePontuacao (char *palavra) {
 }
 
 // imprime linha do arquivo com base no offset da palavra
-void imprimeLinha(int offset,FILE *f) {
+void imprimeLinha(int offset, FILE *f) {
     int pos = ftell(f);
     char linha[2048];
     while (pos < offset) {
-        fgets(linha,2047,f);
+        fgets(linha, 2047, f);
         pos = ftell(f);
     }
-    printf("%s",linha);
+    printf("%s", linha);
 }
 
-// classe que implementa a lista invertida
-#include <vector>
-#include <string>
-#include <iostream>
-#include <unordered_map>
-#include <fstream>
+std::vector<char> compressData(const std::string& data) {
+    uLongf compressedSize = compressBound(data.size());
+    std::vector<char> compressedData(compressedSize);
 
-using namespace std;
+    if (compress(reinterpret_cast<Bytef*>(compressedData.data()), &compressedSize, 
+                 reinterpret_cast<const Bytef*>(data.data()), data.size()) != Z_OK) {
+        throw std::runtime_error("Compression failed");
+    }
+
+    compressedData.resize(compressedSize);
+    return compressedData;
+}
+
+std::string decompressData(const std::vector<char>& compressedData, uLongf originalSize) {
+    std::vector<char> decompressedData(originalSize);
+
+    if (uncompress(reinterpret_cast<Bytef*>(decompressedData.data()), &originalSize, 
+                   reinterpret_cast<const Bytef*>(compressedData.data()), compressedData.size()) != Z_OK) {
+        throw std::runtime_error("Decompression failed");
+    }
+
+    return std::string(decompressedData.begin(), decompressedData.end());
+}
+
 class listaInvertida {
 private:
     unordered_map<string, vector<int>> indice; // Índice em memória
     unordered_map<string, vector<int>> indiceSecundario; // Índice secundário para busca rápida no disco
+    vector<pair<string, int>> buffer; // Buffer para batch writing
+    const size_t BUFFER_SIZE = 1000; // Tamanho do buffer
+
+    // Função para escrever o buffer no arquivo
+    void flushBuffer() {
+        ofstream out("indice.bin", ios::binary | ios::app);
+        if (out.is_open()) {
+            for (const auto& entry : buffer) {
+                std::string data = entry.first + std::to_string(entry.second);
+                auto compressedData = compressData(data);
+                uLongf originalSize = data.size();
+                out.write(reinterpret_cast<const char*>(&originalSize), sizeof(uLongf));
+                out.write(compressedData.data(), compressedData.size());
+            }
+            out.close();
+            buffer.clear(); // Limpar o buffer após escrever
+        }
+    }
 
 public:
     // Construtor
     listaInvertida() { }
 
     // Destrutor
-    ~listaInvertida() { }
+    ~listaInvertida() {
+        flushBuffer(); // Garantir que todos os dados sejam escritos no arquivo
+    }
 
     // Adiciona palavra na estrutura com o offset
     void adiciona(char *palavra, int offset) {
         string palavraStr(palavra); // Convertendo o char* para string
         indice[palavraStr].push_back(offset); // Adiciona o offset ao vetor correspondente à palavra
 
-        // Adiciona ao arquivo binário
-        ofstream out("indice.bin", ios::binary | ios::app);
-        if (out.is_open()) {
-            int length = palavraStr.size();
-            out.write(reinterpret_cast<char*>(&length), sizeof(int));
-            out.write(palavraStr.c_str(), length);
-            out.write(reinterpret_cast<char*>(&offset), sizeof(int));
-            out.close();
+        // Adiciona ao buffer
+        buffer.emplace_back(palavraStr, offset);
+
+        // Se o buffer atingir o tamanho definido, escrever no arquivo
+        if (buffer.size() >= BUFFER_SIZE) {
+            flushBuffer();
         }
     }
 
@@ -74,16 +113,15 @@ public:
         ifstream in("indice.bin", ios::binary);
         if (in.is_open()) {
             while (!in.eof()) {
-                int length;
-                in.read(reinterpret_cast<char*>(&length), sizeof(int));
+                uLongf originalSize;
+                in.read(reinterpret_cast<char*>(&originalSize), sizeof(uLongf));
                 if (in.eof()) break;
-                char *palavra = new char[length + 1];
-                in.read(palavra, length);
-                palavra[length] = '\0';
-                int offset;
-                in.read(reinterpret_cast<char*>(&offset), sizeof(int));
+                std::vector<char> compressedData(originalSize);
+                in.read(compressedData.data(), originalSize);
+                std::string data = decompressData(compressedData, originalSize);
+                std::string palavra = data.substr(0, data.size() - sizeof(int));
+                int offset = std::stoi(data.substr(data.size() - sizeof(int)));
                 indiceSecundario[palavra].push_back(offset);
-                delete[] palavra;
             }
             in.close();
         }
@@ -125,9 +163,7 @@ public:
         *quantidade = 0;
         return nullptr;
     }
-};  map<string, vector<int>> indice;
 };
-
 
 // programa principal
 int main(int argc, char** argv) {
@@ -184,4 +220,3 @@ int main(int argc, char** argv) {
 
     return (EXIT_SUCCESS);
 }
-
