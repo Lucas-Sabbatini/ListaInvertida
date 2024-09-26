@@ -119,8 +119,8 @@ private:
 // programa principal
 int main(int argc, char** argv) {
     // Caminho do arquivo de dados (Bíblia) e da lista invertida
-    const string bibliaPath = "C:\\Users\\gusta\\Documents\\ufu\\5Semestre\\GBD\\ListaInvertida-main\\biblia.txt";
-    const string listaInvertidaPath = "C:\\Users\\gusta\\Documents\\ufu\\5Semestre\\GBD\\ListaInvertida-main\\lista_invertida.txt";
+    const string bibliaPath = "biblia.txt";
+    const string listaInvertidaPath = "lista_invertida.txt";
 
     // abrir arquivo da bíblia
     ifstream in(bibliaPath);
